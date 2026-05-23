@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScoreFlow — Predicciones en Lote</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0f14;
+            --surface: #161923;
+            --surface2: #1e2330;
+            --border: #2a3045;
+            --accent: #0052ff;
+            --accent2: #00b0ff;
+            --warn: #ffab00;
+            --danger: #ff5252;
+            --text: #e8eaf0;
+            --muted: #7a8499;
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Barlow', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+
+        /* ── Header ── */
+        .app-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .app-header .logo {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: 0.5px;
+            color: var(--accent);
+        }
+        .app-header .logo span { color: var(--text); }
+        .app-header .subtitle {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ── Main container ── */
+        .container {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* ── Tabs ── */
+        .mode-tabs {
+            display: flex;
+            gap: 0;
+            background: var(--surface2);
+            border-radius: var(--radius);
+            padding: 4px;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 0.55rem 0.5rem;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-tab.active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .card-header-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text);
+        }
+        .card-body { padding: 1rem; }
+
+        /* ── Form Controls ── */
+        label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--muted);
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+        input[type="date"], select, textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            padding: 0.6rem 0.75rem;
+            font-family: 'Barlow', sans-serif;
+            font-size: 0.9rem;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color 0.2s;
+        }
+        input[type="date"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+        select[multiple] { min-height: 130px; }
+
+        /* Date pills */
+        .date-pills {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .date-pill {
+            flex: 1;
+            padding: 0.55rem 0.4rem;
+            border: 1.5px solid var(--border);
+            border-radius: 50px;
+            background: transparent;
+            color: var(--muted);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .date-pill.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(0,82,255,0.08);
+        }
+
+        .date-inputs-wrap { display: none; }
+        .date-inputs-wrap.visible { display: block; }
+        .date-range-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+        /* League grid */
+        .league-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+        .league-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            color: var(--muted);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .league-chip.selected {
+            border-color: var(--accent);
+            color: var(--text);
+            background: rgba(0,82,255,0.07);
+        }
+        .league-chip input { display: none; }
+        .league-chip .flag { font-size: 1rem; }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.65rem 1.1rem;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover { background: #2a75ff; }
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-success {
+            background: var(--accent);
+            color: #fff;
+        }
+        .btn-blue {
+            background: var(--accent2);
+            color: #fff;
+        }
+        .btn-warn {
+            background: var(--warn);
+            color: #000;
+        }
+        .btn-danger-soft {
+            background: rgba(255,82,82,0.12);
+            color: var(--danger);
+            border: 1px solid rgba(255,82,82,0.3);
+        }
+        .btn-full { width: 100%; margin-top: 0.75rem; }
+        .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.78rem; }
+        .btn-icon { padding: 0.45rem 0.6rem; font-size: 0.9rem; }
+
+        /* ── Fixture table (mobile-optimized) ── */
+        .fixture-list { display: flex; flex-direction: column; gap: 0; }
+        .fixture-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+        .fixture-item:last-child { border-bottom: none; }
+        .fixture-item:active { background: var(--surface2); }
+        .fixture-check-wrap {
+            flex-shrink: 0;
+        }
+        .fixture-check {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+        .fixture-info { flex: 1; min-width: 0; }
+        .fixture-teams {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .fixture-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.2rem;
+        }
+        .fixture-league {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+        }
+        .fixture-date {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+        .fixture-status {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            background: var(--surface2);
+            color: var(--muted);
+        }
+
+        /* Batch select bar */
+        .select-bar {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .select-bar .count-badge {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--accent);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+        }
+
+        /* ── Progress ── */
+        .progress-card { padding: 1rem; }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.82rem;
+        }
+        .progress-label { color: var(--text); }
+        .progress-count { color: var(--muted); }
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 50px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 50px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .log-box {
+            margin-top: 0.75rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.75rem;
+            max-height: 110px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+        .log-line { display: block; }
+        .log-line.ok { color: var(--accent); }
+        .log-line.err { color: var(--danger); }
+        .log-line.warn { color: var(--warn); }
+
+        /* ── Results table (horizontal scroll on mobile) ── */
+        .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            min-width: 560px;
+        }
+        thead th {
+            background: var(--surface2);
+            padding: 0.6rem 0.75rem;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            text-align: left;
+            white-space: nowrap;
+        }
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s;
+        }
+        tbody tr:last-child { border-bottom: none; }
+        tbody tr:hover { background: var(--surface2); }
+        tbody td {
+            padding: 0.6rem 0.75rem;
+            vertical-align: middle;
+        }
+        .td-match { font-family: 'Barlow Condensed', sans-serif; font-weight: 600; }
+        .td-pct { font-variant-numeric: tabular-nums; color: var(--text); }
+        .confidence-badge {
+            display: inline-block;
+            padding: 0.2rem 0.55rem;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            font-family: 'Barlow Condensed', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .conf-alta { background: rgba(0,82,255,0.15); color: var(--accent); }
+        .conf-media { background: rgba(255,171,0,0.15); color: var(--warn); }
+        .conf-baja { background: rgba(255,82,82,0.15); color: var(--danger); }
+
+        /* ── Message cards ── */
+        .msg-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+        .msg-card-header {
+            padding: 0.65rem 0.9rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+        .msg-match-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.88rem;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .msg-body {
+            padding: 0.85rem 0.9rem;
+            font-family: 'Barlow', sans-serif;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            color: #cdd4e8;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* ── Action bar ── */
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ── Section headers ── */
+        .section-heading {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin: 1.25rem 0 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .section-heading::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ── Divider ── */
+        .divider { height: 1px; background: var(--border); margin: 0.75rem 0; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 1.25rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: #000;
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.6rem 1.4rem;
+            border-radius: 50px;
+            z-index: 9999;
+            transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ── Summary strip ── */
+        .summary-strip {
+            display: flex;
+            gap: 0;
+            background: var(--surface2);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        .summary-item {
+            flex: 1;
+            padding: 0.6rem 0.5rem;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .summary-item:last-child { border-right: none; }
+        .summary-item .val {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: var(--accent);
+            display: block;
+        }
+        .summary-item .lbl {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+        }
+
+        /* ── Utility ── */
+        .hidden { display: none !important; }
+        .mt-sm { margin-top: 0.5rem; }
+        .text-muted { color: var(--muted); font-size: 0.78rem; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            display: flex;
+            align-items: flex-end;
+            padding: 0;
+        }
+        .modal-sheet {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            border-radius: 18px 18px 0 0;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.28s cubic-bezier(0.32,0.72,0,1);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .modal-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0.75rem auto 0;
+        }
+        .modal-header {
+            padding: 0.75rem 1rem 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 1.05rem;
+            text-transform: uppercase;
+        }
+        .modal-body { padding: 0 1rem 1rem; }
+        .modal-footer {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ── Calc Modal ── */
+        .calc-match-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.75rem 0 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .calc-match-title span { color: var(--accent); }
+        .calc-form { display: flex; flex-direction: column; gap: 0.65rem; }
+        .calc-market-group {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .calc-market-label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(0,176,255,0.07);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent2);
+        }
+        .calc-inputs-row {
+            display: grid;
+            gap: 0;
+        }
+        .calc-inputs-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+        .calc-inputs-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+        .calc-input-cell {
+            padding: 0.5rem 0.6rem;
+            border-right: 1px solid var(--border);
+        }
+        .calc-input-cell:last-child { border-right: none; }
+        .calc-input-sublabel {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+        .calc-input-cell input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.45rem 0.5rem;
+            font-family: 'Barlow', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-align: center;
+            transition: border-color 0.2s;
+        }
+        .calc-input-cell input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0,82,255,0.12);
+        }
+        .calc-input-cell input::placeholder { font-weight: 400; font-size: 0.78rem; }
+        .calc-bankroll-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.6rem 0.75rem;
+        }
+        .calc-bankroll-icon {
+            font-size: 1.35rem;
+            flex-shrink: 0;
+        }
+        .calc-bankroll-info { flex: 1; min-width: 0; }
+        .calc-bankroll-info label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent2);
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .calc-bankroll-info label span {
+            color: var(--muted);
+            font-size: 0.62rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .calc-bankroll-info input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.4rem 0.6rem;
+            font-family: 'Barlow', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            transition: border-color 0.2s;
+        }
+        .calc-bankroll-info input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(0,82,255,0.12);
+        }
+        .calc-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.65rem;
+        }
+        .calc-results-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text);
+        }
+        .calc-summary-badge {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 0.78rem;
+            padding: 0.18rem 0.55rem;
+            border-radius: 50px;
+            background: rgba(0,82,255,0.12);
+            color: var(--accent);
+        }
+        .calc-result-item {
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid transparent;
+        }
+        .calc-result-item.value { border-color: var(--accent); background: rgba(0,82,255,0.05); }
+        .calc-result-item.warn  { border-color: var(--warn); background: rgba(255,171,0,0.04); }
+        .calc-result-item.no-value { border-color: var(--border); background: rgba(255,82,82,0.03); }
+        .calc-result-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.45rem 0.65rem 0;
+        }
+        .calc-result-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--text);
+        }
+        .calc-edge-badge {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 800;
+            font-size: 0.82rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .calc-edge-badge.value  { background: rgba(0,82,255,0.15); color: var(--accent); }
+        .calc-edge-badge.warn   { background: rgba(255,171,0,0.15); color: var(--warn); }
+        .calc-edge-badge.danger { background: rgba(255,82,82,0.12); color: var(--danger); }
+        .calc-result-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0.65rem 0.45rem;
+            font-size: 0.7rem;
+            color: var(--muted);
+            flex-wrap: wrap;
+            gap: 0.2rem;
+        }
+        .calc-kelly-rec {
+            color: var(--accent2);
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+        .calc-kelly-rec strong { color: var(--text); }
+        @media (max-width: 360px) {
+            .calc-inputs-row.cols-3 { grid-template-columns: repeat(3,1fr); }
+            .calc-input-cell input { font-size: 0.78rem; padding: 0.35rem 0.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <img src="logo.jpg" alt="ScoreFlow Logo" style="height: 38px; width: 38px; border-radius: 8px; border: 1.5px solid var(--accent); object-fit: cover; box-shadow: 0 0 10px rgba(0, 82, 255, 0.25);">
+    <div>
+        <div class="logo">Score<span>Flow</span></div>
+        <div class="subtitle">Predicciones en Lote</div>
+    </div>
+</header>
+
+<!-- ── MAIN TABS ── -->
+<div class="container">
+    <div class="mode-tabs" style="margin-top:1rem;">
+        <button class="mode-tab active" data-panel="panel-search">🔍 Buscar</button>
+        <button class="mode-tab" data-panel="panel-paste">📋 Por IDs</button>
+        <button class="mode-tab" data-panel="panel-results">📊 Resultados</button>
+    </div>
+
+    <!-- ══════════════════ PANEL: SEARCH ══════════════════ -->
+    <div id="panel-search">
+
+        <!-- Fecha -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-header-title">📅 Fecha</span>
+            </div>
+            <div class="card-body">
+                <div class="date-pills">
+                    <button class="date-pill active" data-mode="today">Hoy</button>
+                    <button class="date-pill" data-mode="specific">Específica</button>
+                    <button class="date-pill" data-mode="range">Rango</button>
+                </div>
+                <div id="wrap-specific" class="date-inputs-wrap">
+                    <label for="specificDate">Fecha</label>
+                    <input type="date" id="specificDate">
+                </div>
+                <div id="wrap-range" class="date-inputs-wrap">
+                    <div class="date-range-row">
+                        <div>
+                            <label for="dateFrom">Inicio</label>
+                            <input type="date" id="dateFrom">
+                        </div>
+                        <div>
+                            <label for="dateTo">Fin</label>
+                            <input type="date" id="dateTo">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ligas -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-header-title">🏆 Ligas</span>
+                <button class="btn btn-sm btn-secondary" id="btnToggleAllLeagues">Todas</button>
+            </div>
+            <div class="card-body">
+                <div class="league-grid" id="leagueGrid">
+                    <label class="league-chip selected" data-value="premier_league">
+                        <input type="checkbox" value="premier_league" checked>
+                        <span class="flag">🏴</span> Premier League
+                    </label>
+                    <label class="league-chip selected" data-value="la_liga">
+                        <input type="checkbox" value="la_liga" checked>
+                        <span class="flag">🇪🇸</span> La Liga
+                    </label>
+                    <label class="league-chip selected" data-value="bundesliga">
+                        <input type="checkbox" value="bundesliga" checked>
+                        <span class="flag">🇩🇪</span> Bundesliga
+                    </label>
+                    <label class="league-chip selected" data-value="serie_a">
+                        <input type="checkbox" value="serie_a" checked>
+                        <span class="flag">🇮🇹</span> Serie A
+                    </label>
+                    <label class="league-chip selected" data-value="ligue_1">
+                        <input type="checkbox" value="ligue_1" checked>
+                        <span class="flag">🇫🇷</span> Ligue 1
+                    </label>
+                    <label class="league-chip selected" data-value="champions_league">
+                        <input type="checkbox" value="champions_league" checked>
+                        <span class="flag">🏆</span> Champions
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="btnFetchFixtures">🔍 Buscar Partidos</button>
+
+        <!-- Progress fetch -->
+        <div id="progressFetch" class="card hidden" style="margin-top:1rem;">
+            <div class="progress-card">
+                <div class="progress-header">
+                    <span class="progress-label" id="fetchLabel">Buscando...</span>
+                    <span class="progress-count" id="fetchCount"></span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" id="fetchBar"></div></div>
+                <div class="log-box" id="fetchLog"></div>
+            </div>
+        </div>
+
+        <!-- Fixtures found -->
+        <div id="fixturesSection" class="card hidden" style="margin-top:1rem;">
+            <div class="card-header">
+                <span class="card-header-title">⚽ Partidos Encontrados <span id="fixtureCount" style="color:var(--accent)">0</span></span>
+                <button class="btn btn-sm btn-secondary" id="btnCopyFixtureIds">📋 Copiar IDs</button>
+            </div>
+            <div class="select-bar">
+                <button class="btn btn-sm btn-secondary" id="btnSelectAll">✓ Todos</button>
+                <button class="btn btn-sm btn-secondary" id="btnDeselectAll">✗ Ninguno</button>
+                <span class="count-badge" id="selectedCount">0 sel.</span>
+            </div>
+            <div class="fixture-list" id="fixtureList"></div>
+            <div style="padding:0.75rem 1rem; border-top:1px solid var(--border);">
+                <button class="btn btn-success btn-full" id="btnRunPredictions">⚡ Generar Predicciones</button>
+            </div>
+        </div>
+
+    </div><!-- /panel-search -->
+
+    <!-- ══════════════════ PANEL: PASTE IDs ══════════════════ -->
+    <div id="panel-paste" class="hidden">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-header-title">📋 Pegar Fixture IDs</span>
+            </div>
+            <div class="card-body">
+                <label for="pasteIds">JSON array de fixture IDs</label>
+                <textarea id="pasteIds" placeholder='[{"fixture_id":1234,"league":"premier_league"},{"fixture_id":5678,"league":"la_liga"}]'></textarea>
+                <p class="text-muted mt-sm">Pega el JSON copiado desde "Buscar". Cada entrada necesita <code style="color:var(--accent2)">fixture_id</code> y <code style="color:var(--accent2)">league</code>.</p>
+                <button class="btn btn-primary btn-full" id="btnRunFromPaste" style="margin-top:0.75rem;">⚡ Generar Predicciones</button>
+            </div>
+        </div>
+
+        <!-- Progress paste -->
+        <div id="progressPaste" class="card hidden" style="margin-top:1rem;">
+            <div class="progress-card">
+                <div class="progress-header">
+                    <span class="progress-label" id="pasteLabel">Prediciendo...</span>
+                    <span class="progress-count" id="pasteCount"></span>
+                </div>
+                <div class="progress-track"><div class="progress-fill" id="pasteBar"></div></div>
+                <div class="log-box" id="pasteLog"></div>
+            </div>
+        </div>
+    </div><!-- /panel-paste -->
+
+    <!-- ══════════════════ PANEL: RESULTS ══════════════════ -->
+    <div id="panel-results" class="hidden">
+
+        <div id="noResults" class="text-muted" style="padding:2rem 0; text-align:center;">
+            Aún no hay predicciones. Usa los paneles anteriores.
+        </div>
+
+        <div id="resultsContent" class="hidden">
+
+            <!-- Summary strip -->
+            <div class="summary-strip" style="margin-top:0.5rem;">
+                <div class="summary-item">
+                    <span class="val" id="sumTotal">0</span>
+                    <span class="lbl">Partidos</span>
+                </div>
+                <div class="summary-item">
+                    <span class="val" id="sumAlta">0</span>
+                    <span class="lbl">Alta conf.</span>
+                </div>
+                <div class="summary-item">
+                    <span class="val" id="sumBets">0</span>
+                    <span class="lbl">Value bets</span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="action-bar">
+                <button class="btn btn-secondary btn-sm" id="btnCopyAll">📋 Copiar todo</button>
+                <button class="btn btn-warn btn-sm" id="btnTop3">🏆 Top 3</button>
+                <button class="btn btn-blue btn-sm" id="btnValueBets">💎 Value Bets</button>
+                <button class="btn btn-secondary btn-sm" id="btnDownload">⬇ JSON</button>
+            </div>
+
+            <!-- Table -->
+            <div class="section-heading">Tabla de Resultados</div>
+            <div class="card">
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Partido</th>
+                                <th>1</th>
+                                <th>X</th>
+                                <th>2</th>
+                                <th>BTTS</th>
+                                <th>O2.5</th>
+                                <th>Conf.</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="section-heading">Mensajes Telegram</div>
+            <div id="messagesList"></div>
+
+        </div>
+    </div><!-- /panel-results -->
+
+</div><!-- /container -->
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── MODAL (Top 3 / bottom sheet) ── -->
+<div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+            <span class="modal-title" id="modalTitle">Top 3</span>
+            <button class="btn btn-icon btn-secondary" id="btnCloseModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="msg-body" id="modalContent"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="btnCopyModal" style="flex:1;">📋 Copiar</button>
+            <button class="btn btn-secondary" id="btnCloseModal2">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODAL: VALUE BETS CALCULATOR ── -->
+<div class="modal-overlay hidden" id="calcModalOverlay">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+
+        <div class="modal-header">
+            <div>
+                <div class="modal-title">💎 Calculadora de Cuotas</div>
+                <div id="calcMatchTitle" class="calc-match-title">Local vs Visitante</div>
+            </div>
+            <button class="btn btn-icon btn-secondary" id="btnCloseCalcModal">✕</button>
+        </div>
+
+        <div class="modal-body">
+            <div class="calc-form">
+
+                <!-- 1X2 -->
+                <div class="calc-market-group">
+                    <div class="calc-market-label">⚽ Resultado Final (1X2)</div>
+                    <div class="calc-inputs-row cols-3">
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">1 · Local</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsHome" placeholder="1.95">
+                        </div>
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">X · Empate</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsDraw" placeholder="3.40">
+                        </div>
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">2 · Visit.</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsAway" placeholder="4.10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BTTS -->
+                <div class="calc-market-group">
+                    <div class="calc-market-label">🥅 Ambos Equipos Marcan (BTTS)</div>
+                    <div class="calc-inputs-row cols-2">
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">BTTS · Sí</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsBttsYes" placeholder="1.85">
+                        </div>
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">BTTS · No</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsBttsNo" placeholder="1.95">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Over/Under -->
+                <div class="calc-market-group">
+                    <div class="calc-market-label">📈 Total Goles — Over / Under 2.5</div>
+                    <div class="calc-inputs-row cols-2">
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">Over 2.5</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsOver" placeholder="2.10">
+                        </div>
+                        <div class="calc-input-cell">
+                            <span class="calc-input-sublabel">Under 2.5</span>
+                            <input type="number" step="0.01" min="1.01" id="oddsUnder" placeholder="1.75">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bankroll -->
+                <div class="calc-bankroll-section">
+                    <div class="calc-bankroll-icon">💰</div>
+                    <div class="calc-bankroll-info">
+                        <label for="bankrollAmount">
+                            Bankroll (opcional)
+                            <span>Kelly 1/4 · Importe recomendado</span>
+                        </label>
+                        <input type="number" min="0" id="bankrollAmount" placeholder="Ej: 1000">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Analyze CTA -->
+            <button class="btn btn-primary btn-full" id="btnCalculateValue" style="margin-top: 1rem;">
+                💎 Analizar y Buscar Ventajas
+            </button>
+
+            <!-- Results Area -->
+            <div id="calcResultsArea" class="hidden" style="margin-top: 1rem;">
+                <div class="calc-results-header">
+                    <span class="calc-results-title">📊 Reporte de Value Bets</span>
+                    <span class="calc-summary-badge" id="calcSummaryLabel">0 Detectadas</span>
+                </div>
+                <div id="calcResultsContent" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+                <button class="btn btn-blue btn-full" id="btnApplyCalcToTelegram" style="margin-top: 0.75rem;">
+                    💾 Aplicar al Mensaje de Telegram
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-secondary btn-full" id="btnCloseCalcModal2">Cerrar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = "https://scoreflow-backend.vercel.app/api";
+
+// ── State ──────────────────────────────────────────────────────
+let allFixtures   = [];
+let allPredictions = [];
+let currentCalcIdx = null;
+let manualValueBets = [];
+
+// ── Helpers ───────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function showToast(msg, duration = 2000) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), duration);
+}
+function logLine(boxId, msg, type = "") {
+    const el = $(boxId);
+    const line = document.createElement("span");
+    line.className = `log-line ${type}`;
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+}
+function setProgress(barId, labelId, countId, done, total, label) {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    $(barId).style.width = pct + "%";
+    $(labelId).textContent = label;
+    $(countId).textContent = `${done} / ${total}`;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function fetchJSON(url, retries = 3, baseDelay = 2000, logId = null) {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const r = await fetch(url);
+            if (r.status === 502) {
+                if (i === retries) {
+                    throw new Error("HTTP 502 (Límite de reintentos alcanzado)");
+                }
+                const waitSecs = 2 * (i + 1); // 2s, 4s, 6s
+                const msg = `⚠️ HTTP 502 en petición. Reintentando en ${waitSecs}s...`;
+                console.warn(msg);
+                if (logId) logLine(logId, msg, "warn");
+                await sleep(waitSecs * 1000);
+                continue;
+            }
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return await r.json();
+        } catch (e) {
+            if (i === retries) throw e;
+            const wait = baseDelay * (i + 1);
+            await sleep(wait);
+        }
+    }
+}
+
+function dateRange(from, to) {
+    const dates = [];
+    const cur = new Date(from + "T00:00:00");
+    const end = new Date(to + "T00:00:00");
+    while (cur <= end) {
+        dates.push(cur.toISOString().slice(0, 10));
+        cur.setDate(cur.getDate() + 1);
+    }
+    return dates;
+}
+
+const LEAGUE_NAMES = {
+    premier_league: "Premier League",
+    la_liga: "La Liga",
+    bundesliga: "Bundesliga",
+    serie_a: "Serie A",
+    ligue_1: "Ligue 1",
+    champions_league: "Champions League"
+};
+const LEAGUE_FLAGS = {
+    premier_league: "🏴",
+    la_liga: "🇪🇸",
+    bundesliga: "🇩🇪",
+    serie_a: "🇮🇹",
+    ligue_1: "🇫🇷",
+    champions_league: "🏆"
+};
+const QUALITY_MAP  = { alta: 3, media: 2, baja: 1 };
+const QUALITY_LABEL = { alta: "Alta", media: "Media", baja: "Baja" };
+const QUALITY_EMOJI = { alta: "🔵", media: "🟡", baja: "🔴" };
+
+// ── TABS ──────────────────────────────────────────────────────
+const panels = { "panel-search": $("panel-search"), "panel-paste": $("panel-paste"), "panel-results": $("panel-results") };
+document.querySelectorAll(".mode-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".mode-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        Object.values(panels).forEach(p => p.classList.add("hidden"));
+        panels[btn.dataset.panel].classList.remove("hidden");
+    });
+});
+
+function switchTab(id) {
+    document.querySelectorAll(".mode-tab").forEach(b => b.classList.toggle("active", b.dataset.panel === id));
+    Object.values(panels).forEach(p => p.classList.add("hidden"));
+    panels[id].classList.remove("hidden");
+}
+
+// ── DATE PILLS ────────────────────────────────────────────────
+let dateMode = "today";
+document.querySelectorAll(".date-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+        document.querySelectorAll(".date-pill").forEach(p => p.classList.remove("active"));
+        pill.classList.add("active");
+        dateMode = pill.dataset.mode;
+        $("wrap-specific").classList.toggle("visible", dateMode === "specific");
+        $("wrap-range").classList.toggle("visible", dateMode === "range");
+    });
+});
+
+// ── LEAGUE CHIPS ─────────────────────────────────────────────
+document.querySelectorAll(".league-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+        const cb = chip.querySelector("input");
+        cb.checked = !cb.checked;
+        chip.classList.toggle("selected", cb.checked);
+    });
+});
+
+let allLeaguesOn = true;
+$("btnToggleAllLeagues").addEventListener("click", () => {
+    allLeaguesOn = !allLeaguesOn;
+    document.querySelectorAll(".league-chip input").forEach(cb => cb.checked = allLeaguesOn);
+    document.querySelectorAll(".league-chip").forEach(chip => chip.classList.toggle("selected", allLeaguesOn));
+    $("btnToggleAllLeagues").textContent = allLeaguesOn ? "Ninguna" : "Todas";
+});
+
+function getSelectedLeagues() {
+    return Array.from(document.querySelectorAll(".league-chip input:checked")).map(cb => cb.value);
+}
+
+// ── FETCH FIXTURES ────────────────────────────────────────────
+async function fetchFixturesForLeague(league, date) {
+    try {
+        const fixtures = await fetchJSON(`${API_BASE}/fixtures?league=${league}&date=${date}`, 3, 2000, "fetchLog");
+        return fixtures.map(f => ({ ...f, league: league, _league: league, _date: date }));
+    } catch (e) {
+        logLine("fetchLog", `✗ ${league} (${date}): ${e.message}`, "err");
+        return [];
+    }
+}
+
+$("btnFetchFixtures").addEventListener("click", async () => {
+    const selectedLeagues = getSelectedLeagues();
+    if (!selectedLeagues.length) { showToast("Selecciona al menos una liga"); return; }
+
+    let targetDates = [];
+    if (dateMode === "today") {
+        targetDates = [new Date().toISOString().slice(0, 10)];
+    } else if (dateMode === "specific") {
+        const d = $("specificDate").value;
+        if (!d) { showToast("Selecciona una fecha"); return; }
+        targetDates = [d];
+    } else {
+        const from = $("dateFrom").value, to = $("dateTo").value;
+        if (!from || !to) { showToast("Selecciona ambas fechas"); return; }
+        if (from > to) { showToast("Fecha inicio debe ser anterior"); return; }
+        targetDates = dateRange(from, to);
+    }
+
+    // Reset
+    allFixtures = [];
+    $("fixtureList").innerHTML = "";
+    $("fetchLog").innerHTML = "";
+    $("fixturesSection").classList.add("hidden");
+    $("progressFetch").classList.remove("hidden");
+
+    logLine("fetchLog", `🔍 Buscando en ${selectedLeagues.length} liga(s), ${targetDates.length} día(s)...`);
+
+    const total = targetDates.length * selectedLeagues.length;
+    let done = 0;
+
+    for (const date of targetDates) {
+        for (const league of selectedLeagues) {
+            const fixtures = await fetchFixturesForLeague(league, date);
+            if (fixtures.length) {
+                logLine("fetchLog", `✓ ${LEAGUE_NAMES[league]} (${date}): ${fixtures.length}`, "ok");
+                allFixtures = allFixtures.concat(fixtures);
+            } else {
+                logLine("fetchLog", `— ${LEAGUE_NAMES[league]} (${date}): sin partidos`);
+            }
+            done++;
+            setProgress("fetchBar", "fetchLabel", "fetchCount", done, total, "Buscando partidos...");
+            await sleep(300);
+            if (done % 10 === 0 && done < total) {
+                logLine("fetchLog", `⏸ Pausa 70s (límite API)...`, "warn");
+                await sleep(70000);
+            }
+        }
+    }
+
+    $("progressFetch").classList.add("hidden");
+    renderFixtureList();
+});
+
+function renderFixtureList() {
+    const list = $("fixtureList");
+    list.innerHTML = "";
+    allFixtures.forEach((f, i) => {
+        const item = document.createElement("div");
+        item.className = "fixture-item";
+        item.innerHTML = `
+            <div class="fixture-check-wrap">
+                <input class="fixture-check" type="checkbox" data-index="${i}" checked>
+            </div>
+            <div class="fixture-info">
+                <div class="fixture-teams">${f.home_team} <span style="color:var(--muted)">vs</span> ${f.away_team}</div>
+                <div class="fixture-meta">
+                    <span class="fixture-league">${LEAGUE_FLAGS[f._league] || ""} ${LEAGUE_NAMES[f._league] || f._league}</span>
+                    <span class="fixture-date">· ${f._date || f.match_date || ""}</span>
+                    <span class="fixture-status">${f.status || ""}</span>
+                </div>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+    $("fixtureCount").textContent = allFixtures.length;
+    updateSelectedCount();
+    $("fixturesSection").classList.remove("hidden");
+
+    document.querySelectorAll(".fixture-check").forEach(cb => {
+        cb.addEventListener("change", updateSelectedCount);
+    });
+}
+
+function updateSelectedCount() {
+    const n = document.querySelectorAll(".fixture-check:checked").length;
+    $("selectedCount").textContent = `${n} sel.`;
+}
+
+$("btnSelectAll").addEventListener("click", () => {
+    document.querySelectorAll(".fixture-check").forEach(cb => cb.checked = true);
+    updateSelectedCount();
+});
+$("btnDeselectAll").addEventListener("click", () => {
+    document.querySelectorAll(".fixture-check").forEach(cb => cb.checked = false);
+    updateSelectedCount();
+});
+
+// ── COPY FIXTURE IDs ─────────────────────────────────────────
+$("btnCopyFixtureIds").addEventListener("click", () => {
+    if (!allFixtures.length) { showToast("No hay partidos"); return; }
+    const ids = allFixtures.map(f => ({ fixture_id: f.fixture_id, league: f._league }));
+    navigator.clipboard.writeText(JSON.stringify(ids, null, 2)).then(() => showToast("✓ IDs copiados"));
+});
+
+// ── RUN PREDICTIONS (from fixture list) ───────────────────────
+$("btnRunPredictions").addEventListener("click", async () => {
+    const checked = document.querySelectorAll(".fixture-check:checked");
+    const indices = Array.from(checked).map(cb => parseInt(cb.dataset.index));
+    if (!indices.length) { showToast("Selecciona al menos un partido"); return; }
+    const fixtures = indices.map(i => allFixtures[i]);
+    $("progressFetch").classList.remove("hidden");
+    $("fetchLog").innerHTML = "";
+    await runPredictions(fixtures, "fetchLog", "fetchBar", "fetchLabel", "fetchCount");
+});
+
+// ── RUN PREDICTIONS (from paste) ──────────────────────────────
+$("btnRunFromPaste").addEventListener("click", async () => {
+    const raw = $("pasteIds").value.trim();
+    if (!raw) { showToast("Pega los fixture IDs primero"); return; }
+    let fixtures;
+    try {
+        fixtures = JSON.parse(raw);
+        if (!Array.isArray(fixtures)) throw new Error("Debe ser un array");
+    } catch (e) {
+        showToast("JSON inválido: " + e.message);
+        return;
+    }
+    if (!fixtures.every(f => f.fixture_id && f.league)) {
+        showToast("Cada entrada necesita fixture_id y league");
+        return;
+    }
+    // Map to internal format
+    const mapped = fixtures.map(f => ({ ...f, fixture_id: f.fixture_id, league: f.league, _league: f.league }));
+    $("progressPaste").classList.remove("hidden");
+    $("pasteLog").innerHTML = "";
+    await runPredictions(mapped, "pasteLog", "pasteBar", "pasteLabel", "pasteCount");
+});
+
+// ── CORE: run predictions ─────────────────────────────────────
+async function runPredictions(fixtures, logId, barId, labelId, countId) {
+    allPredictions = [];
+    const total = fixtures.length;
+    logLine(logId, `⚡ Iniciando ${total} predicciones...`);
+
+    for (let i = 0; i < total; i++) {
+        const f = fixtures[i];
+        const leagueVal = f.league || f._league || "";
+        const label = f.home_team && f.away_team ? `${f.home_team} vs ${f.away_team}` : `Fixture #${f.fixture_id}`;
+        setProgress(barId, labelId, countId, i, total, `Prediciendo ${label}...`);
+        try {
+            const pred = await fetchJSON(`${API_BASE}/predict/${f.fixture_id}?league=${leagueVal}`, 3, 2000, logId);
+            pred.match_date = pred.match_date || f._date || "";
+            pred.league = pred.league || leagueVal || "";
+            allPredictions.push(pred);
+            logLine(logId, `✓ ${pred.home_team} vs ${pred.away_team}`, "ok");
+        } catch (e) {
+            logLine(logId, `✗ Fixture ${f.fixture_id}: ${e.message}`, "err");
+        }
+        await sleep(2500);
+        if ((i + 1) % 5 === 0 && i + 1 < total) {
+            logLine(logId, `⏸ Pausa 10s...`, "warn");
+            await sleep(10000);
+        }
+    }
+
+    setProgress(barId, labelId, countId, total, total, "¡Completado!");
+    logLine(logId, `✅ ${allPredictions.length} predicciones listas`, "ok");
+
+    if (allPredictions.length > 0) {
+        renderResults();
+        switchTab("panel-results");
+    }
+}
+
+// ── FORMAT MESSAGE (Telegram) ─────────────────────────────────
+function formatTelegramMessage(pred) {
+    const league = LEAGUE_NAMES[pred.league] || pred.league;
+    const flag   = LEAGUE_FLAGS[pred.league]  || "🏆";
+    const qEmoji = QUALITY_EMOJI[pred.sample_quality] || "⚪";
+    const qLabel = QUALITY_LABEL[pred.sample_quality] || pred.sample_quality;
+
+    // Determine dominant outcome
+    const probs = [
+        { k: "1", v: pred.prob_home_win },
+        { k: "X", v: pred.prob_draw },
+        { k: "2", v: pred.prob_away_win }
+    ].sort((a, b) => b.v - a.v);
+    const topOutcome = probs[0];
+    const topEmoji   = topOutcome.k === "1" ? "🏠" : topOutcome.k === "X" ? "🤝" : "✈️";
+    const topLabel   = topOutcome.k === "1" ? "Local" : topOutcome.k === "X" ? "Empate" : "Visitante";
+
+    // Build value bets block
+    let valueBetsBlock = "";
+    const mktLabel = { "1": "Victoria Local", "X": "Empate", "2": "Victoria Visit.", btts: "Ambos Marcan", btts_no: "Ambos No Marcan", over_25: "Over 2.5", under_25: "Under 2.5" };
+    if (pred.value_bets && pred.value_bets.length) {
+        const bets = pred.value_bets.map(vb =>
+            `  💎 ${mktLabel[vb.market] || vb.market}: ${(vb.model_prob * 100).toFixed(0)}% vs ${(vb.bookmaker_prob * 100).toFixed(0)}% (edge +${(vb.edge * 100).toFixed(1)}%)`
+        ).join("\n");
+        valueBetsBlock = `\n🎯 Value Bets detectadas:\n${bets}\n`;
+    }
+
+    return (
+`${flag} ${league.toUpperCase()}
+━━━━━━━━━━━━━━━━━━
+🆚 ${pred.home_team} vs ${pred.away_team}
+📅 ${pred.match_date}
+
+📊 Probabilidades:
+🏠 Local: ${(pred.prob_home_win * 100).toFixed(1)}%
+🤝 Empate: ${(pred.prob_draw * 100).toFixed(1)}%
+✈️ Visit.: ${(pred.prob_away_win * 100).toFixed(1)}%
+
+⚽ BTTS: ${(pred.prob_btts * 100).toFixed(1)}%  |  Over 2.5: ${(pred.prob_over_25 * 100).toFixed(1)}%
+
+🔮 Favorito: ${topEmoji} ${topLabel} (${(topOutcome.v * 100).toFixed(1)}%)
+📐 xG: ${pred.lambda_home.toFixed(2)} – ${pred.lambda_away.toFixed(2)}
+${qEmoji} Confianza: ${qLabel}
+${valueBetsBlock}
+#ScoreFlow #${(pred.league || "Futbol").replace(/_/g, "")} #Predicciones`
+    );
+}
+
+// ── RENDER RESULTS ────────────────────────────────────────────
+function renderResults() {
+    // Summary
+    const total  = allPredictions.length;
+    const alta   = allPredictions.filter(p => p.sample_quality === "alta").length;
+    const bets   = allPredictions.reduce((acc, p) => acc + (p.value_bets?.length || 0), 0);
+    $("sumTotal").textContent = total;
+    $("sumAlta").textContent  = alta;
+    $("sumBets").textContent  = bets;
+
+    // Table
+    const tbody = $("tableBody");
+    tbody.innerHTML = "";
+    allPredictions.forEach((pred, idx) => {
+        const qClass = `conf-${pred.sample_quality || "baja"}`;
+        const qLabel = QUALITY_LABEL[pred.sample_quality] || pred.sample_quality;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="td-match">${pred.home_team}<br><small style="color:var(--muted);font-size:0.7rem;">${pred.away_team}</small></td>
+            <td class="td-pct">${(pred.prob_home_win * 100).toFixed(0)}%</td>
+            <td class="td-pct">${(pred.prob_draw * 100).toFixed(0)}%</td>
+            <td class="td-pct">${(pred.prob_away_win * 100).toFixed(0)}%</td>
+            <td class="td-pct">${(pred.prob_btts * 100).toFixed(0)}%</td>
+            <td class="td-pct">${(pred.prob_over_25 * 100).toFixed(0)}%</td>
+            <td><span class="confidence-badge ${qClass}">${qLabel}</span></td>
+            <td>
+                <div style="display: flex; gap: 4px;">
+                    <button class="btn btn-icon btn-secondary btn-copy-row" data-idx="${idx}" title="Copiar mensaje">📋</button>
+                    <button class="btn btn-icon btn-blue btn-calc-row" data-idx="${idx}" title="Calcular Value Bets">💎</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Messages
+    const msgList = $("messagesList");
+    msgList.innerHTML = "";
+    allPredictions.forEach((pred, idx) => {
+        const msg = formatTelegramMessage(pred);
+        const div = document.createElement("div");
+        div.className = "msg-card";
+        div.innerHTML = `
+            <div class="msg-card-header">
+                <span class="msg-match-title">${pred.home_team} vs ${pred.away_team}</span>
+                <button class="btn btn-sm btn-secondary btn-copy-msg" data-idx="${idx}">📋 Copiar</button>
+            </div>
+            <div class="msg-body">${escapeHtml(msg)}</div>
+        `;
+        msgList.appendChild(div);
+    });
+
+    // Copy buttons
+    document.querySelectorAll(".btn-copy-msg, .btn-copy-row").forEach(btn => {
+        btn.addEventListener("click", function () {
+            const msg = formatTelegramMessage(allPredictions[parseInt(this.dataset.idx)]);
+            navigator.clipboard.writeText(msg).then(() => showToast("✓ Mensaje copiado"));
+        });
+    });
+
+    // Calc buttons
+    document.querySelectorAll(".btn-calc-row").forEach(btn => {
+        btn.addEventListener("click", function () {
+            openCalcModal(parseInt(this.dataset.idx));
+        });
+    });
+
+    $("noResults").classList.add("hidden");
+    $("resultsContent").classList.remove("hidden");
+}
+
+function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ── TOP 3 ─────────────────────────────────────────────────────
+$("btnTop3").addEventListener("click", () => {
+    if (!allPredictions.length) return;
+    const sorted = [...allPredictions].sort((a, b) =>
+        (QUALITY_MAP[b.sample_quality] || 0) - (QUALITY_MAP[a.sample_quality] || 0)
+    );
+    const top3 = sorted.slice(0, 3);
+
+    let msg = `🏆 TOP 3 — MAYOR CONFIANZA\n${"━".repeat(22)}\n\n`;
+    top3.forEach((p, i) => {
+        const probs = [
+            { k: "Local",    v: p.prob_home_win },
+            { k: "Empate",   v: p.prob_draw },
+            { k: "Visit.",   v: p.prob_away_win }
+        ].sort((a, b) => b.v - a.v);
+
+        msg += `${["🥇","🥈","🥉"][i]} ${p.home_team} vs ${p.away_team}\n`;
+        msg += `   📅 ${p.match_date} · ${LEAGUE_NAMES[p.league] || p.league}\n`;
+        msg += `   🔮 ${probs[0].k}: ${(probs[0].v * 100).toFixed(1)}%\n`;
+        msg += `   ⚽ BTTS: ${(p.prob_btts * 100).toFixed(1)}% | O2.5: ${(p.prob_over_25 * 100).toFixed(1)}%\n`;
+        msg += `   ${QUALITY_EMOJI[p.sample_quality]} Confianza: ${QUALITY_LABEL[p.sample_quality]}\n`;
+        
+        // Value bets si existen
+        if (p.value_bets && p.value_bets.length) {
+            const mktLabel = { "1": "Local", "X": "Empate", "2": "Visit.", btts: "BTTS", btts_no: "BTTS No", over_25: "O2.5", under_25: "U2.5" };
+            msg += `   💎 Value: `;
+            const bets = p.value_bets.map(vb => 
+                `${mktLabel[vb.market] || vb.market} +${(vb.edge * 100).toFixed(1)}%`
+            ).join(", ");
+            msg += bets + "\n";
+        }
+        msg += "\n";
+    });
+    msg += "#ScoreFlow #Top3 #Predicciones";
+
+    showModal("🏆 Top 3 Predicciones", msg);
+});
+
+// ── VALUE BETS ────────────────────────────────────────────────
+$("btnValueBets").addEventListener("click", () => {
+    if (!allPredictions.length) return;
+    
+    const withBets = allPredictions.filter(p => p.value_bets && p.value_bets.length > 0);
+    
+    if (!withBets.length) {
+        showToast("No hay value bets detectadas");
+        return;
+    }
+
+    let msg = `💎 VALUE BETS DETECTADAS\n${"━".repeat(22)}\n`;
+    msg += `Total: ${withBets.length} partido${withBets.length > 1 ? 's' : ''}\n\n`;
+
+    const mktLabel = { 
+        "1": "Victoria Local", 
+        "X": "Empate", 
+        "2": "Victoria Visit.", 
+        btts: "Ambos Marcan", 
+        btts_no: "Ambos No Marcan",
+        over_25: "Over 2.5", 
+        under_25: "Under 2.5" 
+    };
+
+    withBets.forEach((p, i) => {
+        msg += `${i + 1}. ${p.home_team} vs ${p.away_team}\n`;
+        msg += `   📅 ${p.match_date} · ${LEAGUE_NAMES[p.league] || p.league}\n`;
+        msg += `   ${QUALITY_EMOJI[p.sample_quality]} Confianza: ${QUALITY_LABEL[p.sample_quality]}\n`;
+        
+        p.value_bets.forEach(vb => {
+            msg += `   💎 ${mktLabel[vb.market] || vb.market}\n`;
+            msg += `      Modelo: ${(vb.model_prob * 100).toFixed(1)}% vs Casa: ${(vb.bookmaker_prob * 100).toFixed(1)}%\n`;
+            msg += `      Edge: +${(vb.edge * 100).toFixed(1)}%\n`;
+        });
+        msg += "\n";
+    });
+
+    msg += "#ScoreFlow #ValueBets #Predicciones";
+
+    showModal("💎 Value Bets Detectadas", msg);
+});
+
+// ── COPY ALL ──────────────────────────────────────────────────
+$("btnCopyAll").addEventListener("click", () => {
+    if (!allPredictions.length) return;
+    const all = allPredictions.map(p => formatTelegramMessage(p)).join("\n\n" + "─".repeat(24) + "\n\n");
+    navigator.clipboard.writeText(all).then(() => showToast("✓ Todos copiados"));
+});
+
+// ── DOWNLOAD JSON ─────────────────────────────────────────────
+$("btnDownload").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(allPredictions, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `scoreflow_${Date.now()}.json`;
+    a.click();
+});
+
+// ── MODAL ─────────────────────────────────────────────────────
+function showModal(title, content) {
+    $("modalTitle").textContent = title;
+    $("modalContent").textContent = content;
+    $("modalOverlay").classList.remove("hidden");
+}
+function closeModal() { $("modalOverlay").classList.add("hidden"); }
+$("btnCloseModal").addEventListener("click", closeModal);
+$("btnCloseModal2").addEventListener("click", closeModal);
+$("modalOverlay").addEventListener("click", e => { if (e.target === $("modalOverlay")) closeModal(); });
+$("btnCopyModal").addEventListener("click", () => {
+    navigator.clipboard.writeText($("modalContent").textContent).then(() => showToast("✓ Copiado"));
+});
+
+// ── VALUE BETS CALCULATOR MODAL ──────────────────────────────
+
+function openCalcModal(idx) {
+    currentCalcIdx = idx;
+    const pred = allPredictions[idx];
+    $("calcMatchTitle").textContent = `${pred.home_team} vs ${pred.away_team}`;
+    
+    // Clear inputs
+    $("oddsHome").value = "";
+    $("oddsDraw").value = "";
+    $("oddsAway").value = "";
+    $("oddsBttsYes").value = "";
+    $("oddsBttsNo").value = "";
+    $("oddsOver").value = "";
+    $("oddsUnder").value = "";
+    
+    // Load bankroll from localStorage
+    $("bankrollAmount").value = localStorage.getItem("sf_bankroll") || "";
+    
+    // Populate if already exist
+    if (pred.value_bets && pred.value_bets.length) {
+        pred.value_bets.forEach(vb => {
+            const odd = vb.bookmaker_prob ? (1 / vb.bookmaker_prob).toFixed(2) : "";
+            if (vb.market === "1") $("oddsHome").value = odd;
+            if (vb.market === "X") $("oddsDraw").value = odd;
+            if (vb.market === "2") $("oddsAway").value = odd;
+            if (vb.market === "btts") $("oddsBttsYes").value = odd;
+            if (vb.market === "btts_no") $("oddsBttsNo").value = odd;
+            if (vb.market === "over_25") $("oddsOver").value = odd;
+            if (vb.market === "under_25") $("oddsUnder").value = odd;
+        });
+    }
+    
+    $("calcResultsArea").classList.add("hidden");
+    $("calcResultsContent").innerHTML = "";
+    $("calcModalOverlay").classList.remove("hidden");
+}
+
+function closeCalcModal() {
+    $("calcModalOverlay").classList.add("hidden");
+}
+
+$("btnCloseCalcModal").addEventListener("click", closeCalcModal);
+$("btnCloseCalcModal2").addEventListener("click", closeCalcModal);
+$("calcModalOverlay").addEventListener("click", e => { if (e.target === $("calcModalOverlay")) closeCalcModal(); });
+
+$("btnCalculateValue").addEventListener("click", () => {
+    if (currentCalcIdx === null) return;
+    const pred = allPredictions[currentCalcIdx];
+    
+    // Save bankroll to localStorage
+    const bankrollVal = $("bankrollAmount").value.trim();
+    localStorage.setItem("sf_bankroll", bankrollVal);
+    const bankroll = parseFloat(bankrollVal) || 0;
+    
+    // Convierte Cuotas Americanas (Logros) y Decimales a Decimal Estándar
+    function normalizeOdd(val) {
+        // parseFloat ignora el '+' pero mantiene el '-'
+        let num = parseFloat(val);
+        if (!num || isNaN(num)) return 0;
+        
+        // 1. Es una cuota decimal normal (ej. 1.62, 2.50)
+        if (num > 1 && num < 100) {
+            return num;
+        }
+        
+        // 2. Es un logro americano negativo (ej. -150)
+        // Fórmula: 1 + (100 / |valor|)
+        if (num <= -100) {
+            return 1 + (100 / Math.abs(num));
+        }
+        
+        // 3. Es un logro americano positivo (ej. 150 o +150)
+        // Fórmula: 1 + (valor / 100)
+        if (num >= 100) {
+            return 1 + (num / 100);
+        }
+        
+        return num; // Por si ingresan un valor extraño
+    }
+    
+    const markets = [
+        { key: "1", label: "Victoria Local (1)", prob: pred.prob_home_win, odd: normalizeOdd($("oddsHome").value) },
+        { key: "X", label: "Empate (X)", prob: pred.prob_draw, odd: normalizeOdd($("oddsDraw").value) },
+        { key: "2", label: "Victoria Visitante (2)", prob: pred.prob_away_win, odd: normalizeOdd($("oddsAway").value) },
+        { key: "btts", label: "Ambos Marcan (BTTS Sí)", prob: pred.prob_btts, odd: normalizeOdd($("oddsBttsYes").value) },
+        { key: "btts_no", label: "No Marcan Ambos (BTTS No)", prob: 1 - pred.prob_btts, odd: normalizeOdd($("oddsBttsNo").value) },
+        { key: "over_25", label: "Over 2.5 Goles", prob: pred.prob_over_25, odd: normalizeOdd($("oddsOver").value) },
+        { key: "under_25", label: "Under 2.5 Goles", prob: 1 - pred.prob_over_25, odd: normalizeOdd($("oddsUnder").value) }
+    ];
+    
+    manualValueBets = [];
+    const resultsContainer = $("calcResultsContent");
+    resultsContainer.innerHTML = "";
+    
+    let count = 0;
+    
+    markets.forEach(m => {
+        if (!m.odd || isNaN(m.odd) || m.odd <= 1) return;
+        
+        const edge = (m.prob * m.odd) - 1;
+        const bookieProb = 1 / m.odd;
+        
+        // Edge must be > 8% (0.08) to be considered positive value
+        const isValue = edge > 0.08;
+        
+        const div = document.createElement("div");
+        div.style.padding = "0.55rem 0.65rem";
+        div.style.borderRadius = "6px";
+        div.style.display = "flex";
+        div.style.flexDirection = "column";
+        div.style.gap = "0.2rem";
+        div.style.fontSize = "0.8rem";
+        div.style.fontFamily = "'Barlow', sans-serif";
+        
+        // Row container for title and badge
+        const headerRow = document.createElement("div");
+        headerRow.style.display = "flex";
+        headerRow.style.justifyContent = "space-between";
+        headerRow.style.alignItems = "center";
+        
+        const labelSpan = document.createElement("span");
+        labelSpan.innerHTML = `<strong>${m.label}</strong>`;
+        headerRow.appendChild(labelSpan);
+        
+        const edgeSpan = document.createElement("span");
+        edgeSpan.style.fontFamily = "'Barlow Condensed', sans-serif";
+        edgeSpan.style.fontWeight = "800";
+        edgeSpan.style.fontSize = "0.92rem";
+        edgeSpan.style.padding = "0.2rem 0.5rem";
+        edgeSpan.style.borderRadius = "4px";
+        
+        // Detail row for model %, odd %, Kelly, etc.
+        const detailsRow = document.createElement("div");
+        detailsRow.style.fontSize = "0.72rem";
+        detailsRow.style.color = "var(--muted)";
+        detailsRow.style.display = "flex";
+        detailsRow.style.justifyContent = "space-between";
+        detailsRow.style.alignItems = "center";
+        
+        if (isValue) {
+            count++;
+            edgeSpan.textContent = `+${(edge * 100).toFixed(1)}% EDGE`;
+            edgeSpan.style.background = "rgba(0,82,255,0.15)";
+            edgeSpan.style.color = "var(--accent)";
+            div.style.background = "rgba(0,82,255,0.05)";
+            div.style.borderLeft = "3px solid var(--accent)";
+            
+            // Kelly 1/4 Calculation: 0.25 * Edge / (Odds - 1)
+            const kellyFull = edge / (m.odd - 1);
+            const kellyQuarter = kellyFull * 0.25;
+            const kellyPct = (kellyQuarter * 100).toFixed(2);
+            
+            let kellyRec = `Kelly 1/4: <strong>${kellyPct}%</strong>`;
+            if (bankroll > 0) {
+                const stakeAmount = bankroll * kellyQuarter;
+                kellyRec += ` (<strong>$${stakeAmount.toFixed(2)}</strong>)`;
+            }
+            
+            detailsRow.innerHTML = `
+                <span>Mod: ${(m.prob * 100).toFixed(1)}% vs Cuota: ${m.odd.toFixed(2)} (${(bookieProb * 100).toFixed(1)}%)</span>
+                <span style="color:var(--accent2);">${kellyRec}</span>
+            `;
+            
+            manualValueBets.push({
+                market: m.key,
+                model_prob: m.prob,
+                bookmaker_prob: bookieProb,
+                edge: edge
+            });
+        } else {
+            // Edge <= 8% is not value
+            edgeSpan.textContent = edge > 0 ? `+${(edge * 100).toFixed(1)}% Edge` : `${(edge * 100).toFixed(1)}% Edge`;
+            edgeSpan.style.background = "rgba(255,82,82,0.12)";
+            edgeSpan.style.color = "var(--danger)";
+            div.style.background = "rgba(255,82,82,0.02)";
+            div.style.borderLeft = "3px solid rgba(255,82,82,0.2)";
+            
+            let subLabel = "";
+            if (edge > 0) {
+                subLabel = `<span style="color:var(--warn);">Insuficiente (Min +8%)</span>`;
+            } else {
+                subLabel = `<span>Sin Valor</span>`;
+            }
+            
+            detailsRow.innerHTML = `
+                <span>Mod: ${(m.prob * 100).toFixed(1)}% vs Cuota: ${m.odd.toFixed(2)} (${(bookieProb * 100).toFixed(1)}%)</span>
+                <span>${subLabel}</span>
+            `;
+        }
+        
+        headerRow.appendChild(edgeSpan);
+        // Build using new CSS classes
+        div.className = `calc-result-item ${isValue ? 'value' : (edge > 0 ? 'warn' : 'no-value')}`;
+        div.style = ''; // clear any inline styles
+        div.style.padding = '0';
+
+        // Header row
+        const headerRowEl = document.createElement('div');
+        headerRowEl.className = 'calc-result-header-row';
+        const nameEl = document.createElement('span');
+        nameEl.className = 'calc-result-name';
+        nameEl.textContent = m.label;
+        headerRowEl.appendChild(nameEl);
+        headerRowEl.appendChild(edgeSpan);
+        edgeSpan.className = `calc-edge-badge ${isValue ? 'value' : (edge > 0 ? 'warn' : 'danger')}`;
+        edgeSpan.style = '';
+
+        // Details row
+        const detailsRowEl = document.createElement('div');
+        detailsRowEl.className = 'calc-result-details';
+        detailsRowEl.innerHTML = detailsRow.innerHTML;
+
+        div.appendChild(headerRowEl);
+        div.appendChild(detailsRowEl);
+        resultsContainer.appendChild(div);
+    });
+    
+    if (resultsContainer.children.length === 0) {
+        resultsContainer.innerHTML = `<div style="text-align:center; color:var(--muted); padding:1rem 0;">Introduce al menos una cuota para calcular.</div>`;
+        $("btnApplyCalcToTelegram").classList.add("hidden");
+    } else {
+        $("btnApplyCalcToTelegram").classList.remove("hidden");
+    }
+    
+    $("calcSummaryLabel").textContent = `${count} Ventaja(s) Detectada(s)`;
+    $("calcResultsArea").classList.remove("hidden");
+});
+
+$("btnApplyCalcToTelegram").addEventListener("click", () => {
+    if (currentCalcIdx === null) return;
+    const pred = allPredictions[currentCalcIdx];
+    pred.value_bets = manualValueBets;
+    renderResults();
+    showToast("✓ Value bets aplicadas al mensaje de Telegram");
+    closeCalcModal();
+});
+</script>
+</body>
+</html>
