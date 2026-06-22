@@ -890,6 +890,10 @@
                         <input type="checkbox" value="champions_league" checked>
                         <span class="flag">🏆</span> Champions
                     </label>
+                    <label class="league-chip selected" data-value="world_cup">
+                        <input type="checkbox" value="world_cup" checked>
+                        <span class="flag">🌍</span> Mundial
+                    </label>
                 </div>
             </div>
         </div>
@@ -1217,7 +1221,8 @@ const LEAGUE_NAMES = {
     bundesliga: "Bundesliga",
     serie_a: "Serie A",
     ligue_1: "Ligue 1",
-    champions_league: "Champions League"
+    champions_league: "Champions League",
+    world_cup: "Mundial"
 };
 const LEAGUE_FLAGS = {
     premier_league: "🏴",
@@ -1225,7 +1230,8 @@ const LEAGUE_FLAGS = {
     bundesliga: "🇩🇪",
     serie_a: "🇮🇹",
     ligue_1: "🇫🇷",
-    champions_league: "🏆"
+    champions_league: "🏆",
+    world_cup: "🌍"
 };
 const QUALITY_MAP  = { alta: 3, media: 2, baja: 1 };
 const QUALITY_LABEL = { alta: "Alta", media: "Media", baja: "Baja" };
@@ -1403,6 +1409,7 @@ $("btnRunPredictions").addEventListener("click", async () => {
     if (!indices.length) { showToast("Selecciona al menos un partido"); return; }
     const fixtures = indices.map(i => allFixtures[i]);
     $("progressFetch").classList.remove("hidden");
+    $("progressFetch").scrollIntoView({ behavior: "smooth" });
     $("fetchLog").innerHTML = "";
     await runPredictions(fixtures, "fetchLog", "fetchBar", "fetchLabel", "fetchCount");
 });
@@ -1473,6 +1480,21 @@ function formatTelegramMessage(pred) {
     const qEmoji = QUALITY_EMOJI[pred.sample_quality] || "⚪";
     const qLabel = QUALITY_LABEL[pred.sample_quality] || pred.sample_quality;
 
+    function computeConfidence(p) {
+        const totalWeight = p.home_form_weight + p.away_form_weight;
+        const sampleScore = Math.min(50, (totalWeight / 12) * 50);
+        const eloDiff = Math.abs(p.elo_home - p.elo_away);
+        const eloScore = Math.min(20, (eloDiff / 200) * 20);
+        const totalLambda = p.lambda_home + p.lambda_away;
+        const maxLambda = Math.max(p.lambda_home, p.lambda_away);
+        const maxProb = totalLambda > 0 ? maxLambda / totalLambda : 0.33;
+        const decisiveness = Math.min(20, Math.max(0, ((maxProb - 0.33) / 0.40) * 20));
+        const recency = totalWeight > 0 ? 10 : 0;
+        const total = sampleScore + eloScore + decisiveness + recency;
+        return Math.min(99.9, Math.max(10.0, total));
+    }
+    const confScore = computeConfidence(pred).toFixed(1);
+
     // Determine dominant outcome
     const probs = [
         { k: "1", v: pred.prob_home_win },
@@ -1482,6 +1504,13 @@ function formatTelegramMessage(pred) {
     const topOutcome = probs[0];
     const topEmoji   = topOutcome.k === "1" ? "🏠" : topOutcome.k === "X" ? "🤝" : "✈️";
     const topLabel   = topOutcome.k === "1" ? "Local" : topOutcome.k === "X" ? "Empate" : "Visitante";
+
+    // Double Chance & DNB
+    const p1X = pred.prob_home_win + pred.prob_draw;
+    const p12 = pred.prob_home_win + pred.prob_away_win;
+    const pX2 = pred.prob_draw + pred.prob_away_win;
+    const pDnb1 = pred.prob_home_win / (pred.prob_home_win + pred.prob_away_win);
+    const pDnb2 = pred.prob_away_win / (pred.prob_home_win + pred.prob_away_win);
 
     // Build value bets block
     let valueBetsBlock = "";
@@ -1506,9 +1535,15 @@ function formatTelegramMessage(pred) {
 
 ⚽ BTTS: ${(pred.prob_btts * 100).toFixed(1)}%  |  Over 2.5: ${(pred.prob_over_25 * 100).toFixed(1)}%
 
+🛡️ Doble Oportunidad (1X / 12 / X2):
+${(p1X * 100).toFixed(1)}% | ${(p12 * 100).toFixed(1)}% | ${(pX2 * 100).toFixed(1)}%
+
+⛔ Sin Empate (DNB 1 / DNB 2):
+${(pDnb1 * 100).toFixed(1)}% | ${(pDnb2 * 100).toFixed(1)}%
+
 🔮 Favorito: ${topEmoji} ${topLabel} (${(topOutcome.v * 100).toFixed(1)}%)
 📐 xG: ${pred.lambda_home.toFixed(2)} – ${pred.lambda_away.toFixed(2)}
-${qEmoji} Confianza: ${qLabel}
+${qEmoji} Confianza: ${qLabel} (${confScore}%)
 ${valueBetsBlock}
 #ScoreFlow #${(pred.league || "Futbol").replace(/_/g, "")} #Predicciones`
     );
